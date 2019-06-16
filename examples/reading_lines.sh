@@ -2,34 +2,59 @@
 
 source "$(dirname "$(dirname "${BASH_SOURCE[0]}")")/env.sh"
 
-DATAFILE="${DATADIR}/people.csv"
+COMMA_DATA_FILE="${DATADIR}/people.csv"
+TAB_DATA_FILE="${DATADIR}/people.tsv"
 
 
 ########################################################################
 
-echo "0. The data"
-echo
-echo '$' cat "${DATAFILE}"
-cat "${DATAFILE}"
+example 0 "The Data: One record per line"
 
+echo  "[ Field Separator: Comma ',' ]"
+echo '$' cat "${COMMA_DATA_FILE}"
+cat "${COMMA_DATA_FILE}"
+
+echo
+
+echo  "[ Field Separator: Tab '\\t' ]"
+echo '$' cat "${TAB_DATA_FILE}"
+cat "${TAB_DATA_FILE}"
+
+
+# this will be used later to expand the single-char
+# codes into full names
+show_sex() {
+    case "$1" in
+        M)  echo "Male"     ;;
+        F)  echo "Female"   ;;
+        I)  echo "Intersex" ;;
+        *)  echo "Other"    ;;
+    esac
+}
 
 ########################################################################
 
-echo
-echo "1. Reading one line at a time"
-echo
+example "Reading one line at a time"
 
+echo "Reading data file \"${COMMA_DATA_FILE}\""
 while read LINE
 do
+    # LINE does not contain the newline character
+    # that separates lines
     echo "Got a line: '${LINE}'"
-done < "${DATAFILE}"
+
+    # we redirect the input of the 'while' builtin command!
+    # (you can also pipe ("|") into 'while')
+done < "${COMMA_DATA_FILE}"
 
 
 ########################################################################
 
-echo
-echo "2. Letting the shell word-split our line"
-echo "   (WARNING - messing with IFS can be hazardous!)"
+example "Splitting the line into separate fields"
+
+echo "   WARNING: While this is a powerful technique that works,"
+echo "            messing with IFS can be hazardous!"
+echo "            (see the neighboring script comments)"
 echo
 
 # whenever you are messing with IFS, it's always a good
@@ -60,15 +85,51 @@ oldIFS="${IFS}"
 # (while already split the input on newlines)
 while IFS="," read NAME AGE SEX
 do
+    # do something with the fields
     echo -n -e "${NAME}:\tage=${AGE} sex="
-    case "${SEX}" in
-        M)  echo "Male" ;;
-        F)  echo "Female" ;;
-        I)  echo "Intersex" ;;
-        *)  echo "Other" ;;
-    esac
+    show_sex "${SEX}"
     
-done < "${DATAFILE}"
+done < "${COMMA_DATA_FILE}"
 
 # restore IFS to its original value
 IFS="${oldIFS}"
+
+
+##########################################################################
+
+example "Easier wordsplitting with tab '\\t'"
+
+# The 'tab' character was intended as record separator,
+# because characters like ',' are that are commonly used
+# in records introduce an annoying in-band-sigling problem.
+# If you can guarantee your data does not include the
+# tab '\t' character (or newlines '\n'), the shell can
+# split lines into fields without changing IFS.
+#
+# By default, IFS is set to three whitespacd characters:
+# space, tab, and newline.
+#
+#     IFS=" \t\n"
+#
+# (single quote strings that start with '$' like $'string'
+#  expand escape sequences like '\n' (newline)  or
+#  '\uHHHH' (Unicode code point up to 4 hex-digits long)
+#
+# (why single quotes? The double quote version $"string"
+#  use the current locale when deciding how to expand
+#  special characters. This is for human interactive
+#  situations; it's a good idea to avoid things that
+#  might break your script unexpectedly).
+
+while read NAME AGE SEX
+do
+    # do something with the fields
+    echo -n -e "${NAME}:\tage=${AGE} sex="
+    show_sex "${SEX}"
+
+done < "${TAB_DATA_FILE}"
+
+
+##########################################################################
+
+end_of_examples
